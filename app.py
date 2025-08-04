@@ -63,7 +63,7 @@ if uploaded_file:
     # ✅ 根据模式变量确定匹配函数所需 mode 参数
     mode_flag = 'exact' if match_mode.startswith("完全匹配") else 'fragment'
 
-        results = []
+    results = []
     for seq in cleaned_sequences:
         matches = find_matching_peptides(seq, merged_pep_data_list, mode=mode_flag)
         if matches:
@@ -101,4 +101,5 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
