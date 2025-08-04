@@ -11,6 +11,7 @@ aa_only = re.compile(r'[ACDEFGHIKLMNPQRSTVWY]', flags=re.I)
 # 标题
 st.title("酶制剂与生物催化：肽段序列匹配工具")
 st.write("上传数据文件注意：文件后缀必须为.xlsx，.xlsx文件内容必须包含标题行，且所有数据必须在第一列，第一列第一行的标题行内容必须为Peptide，后续行依次接要分析的肽段")
+st.write("demo_peptides.xlsx为对应格式的测试用数据，可直接下载打开查看数据格式要求")
 st.write("上传 Excel 文件，自动匹配功能肽数据库并返回结果")
 
 # 上传文件
@@ -108,6 +109,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
