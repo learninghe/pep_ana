@@ -63,13 +63,13 @@ if uploaded_file:
     # ✅ 根据模式变量确定匹配函数所需 mode 参数
     mode_flag = 'exact' if match_mode.startswith("完全匹配") else 'fragment'
 
-    results = []
+        results = []
     for seq in cleaned_sequences:
         matches = find_matching_peptides(seq, merged_pep_data_list, mode=mode_flag)
         if matches:
-            # 多条命中时，用“; ”合并
             results.append({
                 'sequence': seq,
+                'matched_sequence': '; '.join([str(m['sequence']) for m in matches]),  # ✅ 新增
                 'PepLab ID': '; '.join([str(m['PepLab ID']) for m in matches]),
                 'length': '; '.join([str(m['length']) for m in matches]),
                 'Activity': '; '.join([str(m['activity']) for m in matches])
@@ -77,6 +77,7 @@ if uploaded_file:
         else:
             results.append({
                 'sequence': seq,
+                'matched_sequence': None,   # ✅ 新增
                 'PepLab ID': None,
                 'length': None,
                 'Activity': None
@@ -100,3 +101,4 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
