@@ -16,6 +16,12 @@ st.write("上传 Excel 文件，自动匹配功能肽数据库并返回结果")
 # 上传文件
 uploaded_file = st.file_uploader("上传 Excel 文件", type=["xlsx"])
 
+# ✅ 新增：匹配模式选择
+match_mode = st.radio(
+    "选择匹配模式",
+    ["完全匹配（完全一致才算匹配）", "片段匹配（只要上传序列中存在连续片段与数据库序列完全一致即可）"]
+)
+
 if uploaded_file:
     # 读取用户上传的肽段
     pep_data = pd.read_excel(uploaded_file, sheet_name='Sheet1')
@@ -42,19 +48,31 @@ if uploaded_file:
     merged_pep_data = pd.concat(pepdatalist, ignore_index=True)
     merged_pep_data_list = merged_pep_data.to_dict(orient='records')
 
-    # 匹配逻辑
-    def find_matching_peptides(sequence, pep_data_list):
-        return [p for p in pep_data_list if sequence == p['sequence']]
+    # 📌 匹配逻辑：根据用户选择切换
+    def find_matching_peptides(sequence, pep_data_list, mode):
+        """
+        mode: 'exact' 或 'fragment'
+        """
+        if mode == 'exact':
+            # 完全匹配
+            return [p for p in pep_data_list if sequence == p['sequence']]
+        else:
+            # 片段匹配：只要数据库中某条序列是上传序列的连续子串即可
+            return [p for p in pep_data_list if p['sequence'] in sequence]
+
+    # ✅ 根据模式变量确定匹配函数所需 mode 参数
+    mode_flag = 'exact' if match_mode.startswith("完全匹配") else 'fragment'
 
     results = []
     for seq in cleaned_sequences:
-        matches = find_matching_peptides(seq, merged_pep_data_list)
+        matches = find_matching_peptides(seq, merged_pep_data_list, mode=mode_flag)
         if matches:
+            # 多条命中时，用“; ”合并
             results.append({
                 'sequence': seq,
-                'PepLab ID': matches[0]['PepLab ID'],
-                'length': matches[0]['length'],
-                'Activity': matches[0]['activity']
+                'PepLab ID': '; '.join([str(m['PepLab ID']) for m in matches]),
+                'length': '; '.join([str(m['length']) for m in matches]),
+                'Activity': '; '.join([str(m['activity']) for m in matches])
             })
         else:
             results.append({
@@ -81,7 +99,4 @@ if uploaded_file:
         data=to_excel(output_df),
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-
     )
-
-
