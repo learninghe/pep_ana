@@ -15,7 +15,14 @@ st.write("上传 Excel 文件，自动匹配功能肽数据库并返回结果")
 
 # 上传文件
 uploaded_file = st.file_uploader("上传 Excel 文件", type=["xlsx"])
-
+# -------------------- 测试数据下载 --------------------
+with open("demo_peptides.xlsx", "rb") as f:
+    st.download_button(
+        label="📎 下载示例文件（demo_peptides.xlsx）",
+        data=f,
+        file_name="demo_peptides.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 # ✅ 新增：匹配模式选择
 match_mode = st.radio(
     "选择匹配模式",
@@ -101,6 +108,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
