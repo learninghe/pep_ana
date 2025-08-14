@@ -24,10 +24,19 @@ with open("demo_peptides.xlsx", "rb") as f:
         file_name="demo_peptides.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-# ✅ 新增：匹配模式选择
+
+# ✅ 匹配模式选择
 match_mode = st.radio(
     "选择匹配模式",
     ["完全匹配（完全一致才算匹配）", "片段匹配（只要上传序列中存在连续片段与数据库序列完全一致即可）"]
+)
+
+# ✅ 新增：直接在网页粘贴蛋白序列
+st.subheader("2️⃣ 蛋白序列（可选）")
+protein_seq_input = st.text_area(
+    "请输入一条蛋白序列（纯字母即可，无需 FASTA 标题行，留空则不进行定位）",
+    placeholder="MKTLL...",
+    height=100
 )
 
 if uploaded_file:
@@ -38,7 +47,7 @@ if uploaded_file:
 
     st.write("✅ 已读取并标准化肽段序列")
 
-    # 读取本地肽段数据库（假设放在 '功能肽' 文件夹）
+    # 读取本地肽段数据库
     pepdatalist = []
     file_path_pepdata = '肽段分析/功能肽'
     pattern = os.path.join(file_path_pepdata, '*.csv')
@@ -56,19 +65,13 @@ if uploaded_file:
     merged_pep_data = pd.concat(pepdatalist, ignore_index=True)
     merged_pep_data_list = merged_pep_data.to_dict(orient='records')
 
-    # 📌 匹配逻辑：根据用户选择切换
+    # 匹配逻辑
     def find_matching_peptides(sequence, pep_data_list, mode):
-        """
-        mode: 'exact' 或 'fragment'
-        """
         if mode == 'exact':
-            # 完全匹配
             return [p for p in pep_data_list if sequence == p['sequence']]
         else:
-            # 片段匹配：只要数据库中某条序列是上传序列的连续子串即可
             return [p for p in pep_data_list if p['sequence'] in sequence]
 
-    # ✅ 根据模式变量确定匹配函数所需 mode 参数
     mode_flag = 'exact' if match_mode.startswith("完全匹配") else 'fragment'
 
     results = []
@@ -77,7 +80,7 @@ if uploaded_file:
         if matches:
             results.append({
                 'sequence': seq,
-                'matched_sequence': '; '.join([str(m['sequence']) for m in matches]),  # ✅ 新增
+                'matched_sequence': '; '.join([str(m['sequence']) for m in matches]),
                 'PepLab ID': '; '.join([str(m['PepLab ID']) for m in matches]),
                 'length': '; '.join([str(m['length']) for m in matches]),
                 'Activity': '; '.join([str(m['activity']) for m in matches])
@@ -85,11 +88,52 @@ if uploaded_file:
         else:
             results.append({
                 'sequence': seq,
-                'matched_sequence': None,   # ✅ 新增
+                'matched_sequence': None,
                 'PepLab ID': None,
                 'length': None,
                 'Activity': None
             })
+
+    # --------------------------------------------------
+    # ✅ 新增：蛋白定位（可选）
+    protein_seq = ''.join(aa_only.findall(protein_seq_input.upper()))
+    if protein_seq:
+        st.write(f"✅ 已读入蛋白序列，长度 {len(protein_seq)} aa")
+
+        def locate_peptide(peptide, protein):
+            peptide = peptide.upper()
+            positions = []
+            start = 0
+            while True:
+                idx = protein.find(peptide, start)
+                if idx == -1:
+                    break
+                positions.append((idx + 1, idx + len(peptide)))  # 1-based
+                start = idx + 1
+            return positions
+
+        for res in results:
+            pep = res['sequence']
+            locs = locate_peptide(pep, protein_seq)
+            if locs:
+                res['在蛋白中的位置'] = '; '.join([f"{s}-{e}" for s, e in locs])
+                contexts = []
+                for s, e in locs:
+                    left_start = max(s - 6, 0)  # 取前5位，再减1变成0-based
+                    right_end = min(e + 5, len(protein_seq))
+                    left = protein_seq[left_start:s - 1]
+                    mid = f"[{protein_seq[s - 1:e]}]"
+                    right = protein_seq[e:right_end]
+                    contexts.append(left + mid + right)
+                res['前后5aa上下文'] = '; '.join(contexts)
+            else:
+                res['在蛋白中的位置'] = None
+                res['前后5aa上下文'] = None
+    else:
+        # 没有输入蛋白序列，直接填 None
+        for res in results:
+            res['在蛋白中的位置'] = None
+            res['前后5aa上下文'] = None
 
     # 显示结果表格
     st.subheader("匹配结果")
@@ -109,73 +153,3 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-
-# -------------------- 新增：蛋白序列定位 --------------------
-st.markdown("---")
-st.subheader("🧬 可选：输入蛋白全长序列进行定位")
-protein_seq_input = st.text_area(
-    "请输入一条完整的蛋白氨基酸序列（仅支持 20 种标准氨基酸字母，大小写均可）：",
-    placeholder="例如：MKTLL..."
-)
-
-# 如果用户输入了蛋白序列，则进行定位分析
-if protein_seq_input.strip():
-    # 清洗蛋白序列
-    full_protein = ''.join(aa_only.findall(protein_seq_input)).upper()
-    if not full_protein:
-        st.warning("❗ 未检测到合法的氨基酸字符，请重新输入！")
-        st.stop()
-
-    st.success(f"✅ 已读取蛋白序列（长度：{len(full_protein)} aa）")
-
-    # 构建定位结果
-    locate_results = []
-    for seq in cleaned_sequences:
-        seq = seq.upper()
-        if not seq:
-            continue
-        start = 1  # 使用 1-based 索引，便于阅读
-        while True:
-            idx = full_protein.find(seq, start - 1)
-            if idx == -1:
-                break
-            # 计算上下文区域
-            left_start = max(idx - 5, 0)
-            right_end = min(idx + len(seq) + 5, len(full_protein))
-            context = full_protein[left_start:right_end]
-            # 高亮匹配区域
-            match_start_in_context = idx - left_start
-            match_end_in_context = match_start_in_context + len(seq)
-            context_display = (
-                context[:match_start_in_context] +
-                "**" + context[match_start_in_context:match_end_in_context] + "**" +
-                context[match_end_in_context:]
-            )
-            locate_results.append({
-                'Peptide': seq,
-                'Start': idx + 1,
-                'End': idx + len(seq),
-                'Context (±5aa)': context_display
-            })
-            start = idx + 1  # 继续往后找，允许重复匹配
-
-    if locate_results:
-        st.subheader("蛋白定位结果")
-        locate_df = pd.DataFrame(locate_results)
-        st.dataframe(locate_df)   # Streamlit 会自动渲染 markdown
-        # 下载定位结果
-        st.download_button(
-            label="📥 下载定位结果 Excel",
-            data=to_excel(locate_df),
-            file_name='肽段蛋白定位结果.xlsx',
-            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-    else:
-        st.info("⚠️ 当前输入的蛋白序列中未找到任何上传肽段的匹配。")
-else:
-    # 用户未输入蛋白序列，什么都不做
-    pass
-
-
-
-
