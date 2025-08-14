@@ -148,7 +148,7 @@ if uploaded_file:
     if protein_seq:
         st.write(f"✅ 已读入蛋白序列，长度 {len(protein_seq)} aa")
 
-        def locate_peptide(peptide, protein):
+                def locate_peptide(peptide, protein):
             peptide = peptide.upper()
             positions = []
             start = 0
@@ -165,17 +165,27 @@ if uploaded_file:
             locs = locate_peptide(pep, protein_seq)
             if locs:
                 res['在蛋白中的位置'] = '; '.join([f"{s}-{e}" for s, e in locs])
+
                 contexts = []
+                left_aas = []
                 for s, e in locs:
-                    left_start = max(s - 6, 0)  # 取前5位，再减1变成0-based
+                    # 左侧单个氨基酸
+                    left_aa = protein_seq[s-2] if s-2 >= 0 else ''
+                    left_aas.append(left_aa)
+
+                    # 原来的前后5aa上下文
+                    left_start = max(s - 6, 0)
                     right_end = min(e + 5, len(protein_seq))
                     left = protein_seq[left_start:s - 1]
                     mid = f"[{protein_seq[s - 1:e]}]"
                     right = protein_seq[e:right_end]
                     contexts.append(left + mid + right)
+
+                res['左侧紧邻氨基酸'] = '; '.join(left_aas)
                 res['前后5aa上下文'] = '; '.join(contexts)
             else:
                 res['在蛋白中的位置'] = None
+                res['左侧紧邻氨基酸'] = None
                 res['前后5aa上下文'] = None
     else:
         # 没有输入蛋白序列，直接填 None
@@ -201,6 +211,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
