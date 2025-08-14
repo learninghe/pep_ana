@@ -24,19 +24,10 @@ with open("demo_peptides.xlsx", "rb") as f:
         file_name="demo_peptides.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-# ✅ 匹配模式选择
+# ✅ 新增：匹配模式选择
 match_mode = st.radio(
     "选择匹配模式",
     ["完全匹配（完全一致才算匹配）", "片段匹配（只要上传序列中存在连续片段与数据库序列完全一致即可）"]
-)
-
-# ✅ 新增：直接在网页粘贴蛋白序列
-st.subheader("2️⃣ 蛋白序列（可选）")
-protein_seq_input = st.text_area(
-    "请输入一条蛋白序列（纯字母即可，无需 FASTA 标题行，留空则不进行定位）",
-    placeholder="MKTLL...",
-    height=100
 )
 
 if uploaded_file:
@@ -47,7 +38,7 @@ if uploaded_file:
 
     st.write("✅ 已读取并标准化肽段序列")
 
-    # 读取本地肽段数据库
+    # 读取本地肽段数据库（假设放在 '功能肽' 文件夹）
     pepdatalist = []
     file_path_pepdata = '肽段分析/功能肽'
     pattern = os.path.join(file_path_pepdata, '*.csv')
@@ -65,13 +56,19 @@ if uploaded_file:
     merged_pep_data = pd.concat(pepdatalist, ignore_index=True)
     merged_pep_data_list = merged_pep_data.to_dict(orient='records')
 
-    # 匹配逻辑
+    # 📌 匹配逻辑：根据用户选择切换
     def find_matching_peptides(sequence, pep_data_list, mode):
+        """
+        mode: 'exact' 或 'fragment'
+        """
         if mode == 'exact':
+            # 完全匹配
             return [p for p in pep_data_list if sequence == p['sequence']]
         else:
+            # 片段匹配：只要数据库中某条序列是上传序列的连续子串即可
             return [p for p in pep_data_list if p['sequence'] in sequence]
 
+    # ✅ 根据模式变量确定匹配函数所需 mode 参数
     mode_flag = 'exact' if match_mode.startswith("完全匹配") else 'fragment'
 
     results = []
@@ -80,7 +77,7 @@ if uploaded_file:
         if matches:
             results.append({
                 'sequence': seq,
-                'matched_sequence': '; '.join([str(m['sequence']) for m in matches]),
+                'matched_sequence': '; '.join([str(m['sequence']) for m in matches]),  # ✅ 新增
                 'PepLab ID': '; '.join([str(m['PepLab ID']) for m in matches]),
                 'length': '; '.join([str(m['length']) for m in matches]),
                 'Activity': '; '.join([str(m['activity']) for m in matches])
@@ -88,11 +85,27 @@ if uploaded_file:
         else:
             results.append({
                 'sequence': seq,
-                'matched_sequence': None,
+                'matched_sequence': None,   # ✅ 新增
                 'PepLab ID': None,
                 'length': None,
                 'Activity': None
             })
 
+    # 显示结果表格
+    st.subheader("匹配结果")
+    output_df = pd.DataFrame(results)
+    st.dataframe(output_df)
 
+    # 提供下载
+    def to_excel(df):
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        return buffer.getvalue()
 
+    st.download_button(
+        label="📥 下载结果 Excel",
+        data=to_excel(output_df),
+        file_name='肽段匹配结果.xlsx',
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
