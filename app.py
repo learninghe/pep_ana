@@ -11,17 +11,14 @@ SESSION_KEY = "has_counted_this_session"
 
 # ------------- 会话级去重 -------------
 if SESSION_KEY not in st.session_state:
+    # -------------- 获取 IP --------------
     def get_visitor_ip():
-        headers = st.context.headers
-        # 按优先级检查常见头
-        for key in ["CF-Connecting-IP", "X-Real-IP", "X-Forwarded-For"]:
-            val = headers.get(key)
-            if val:
-                # X-Forwarded-For 可能有多级，只取第一个
-                return val.split(",")[0].strip()
-        # 兜底
-        return headers.get("Remote-Addr", "127.0.0.1")   # 本地调试显示 127.0.0.1
-    
+        fwd = st.context.headers.get("X-Forwarded-For")
+        if fwd:
+            return fwd.split(",")[0].strip()
+        return st.context.headers.get("Remote-Addr", "unknown")
+
+    now = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
     ip = get_visitor_ip()
 
     # -------------- 读写日志 --------------
@@ -194,6 +191,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
