@@ -191,8 +191,9 @@ if uploaded_file:
         # 没有输入蛋白序列，直接填 None
         for res in results:
             res['在蛋白中的位置'] = None
-            res['前后5aa上下文'] = None
             res['左侧紧邻氨基酸'] = None
+            res['前后5aa上下文'] = None
+            
 
     # 显示结果表格
     st.subheader("匹配结果")
@@ -212,6 +213,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
