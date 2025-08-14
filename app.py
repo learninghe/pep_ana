@@ -148,7 +148,7 @@ if uploaded_file:
     if protein_seq:
         st.write(f"✅ 已读入蛋白序列，长度 {len(protein_seq)} aa")
 
-                def locate_peptide(peptide, protein):
+        def locate_peptide(peptide, protein):
             peptide = peptide.upper()
             positions = []
             start = 0
@@ -211,6 +211,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
