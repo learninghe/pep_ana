@@ -110,6 +110,71 @@ if uploaded_file:
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
+# -------------------- 新增：蛋白序列定位 --------------------
+st.markdown("---")
+st.subheader("🧬 可选：输入蛋白全长序列进行定位")
+protein_seq_input = st.text_area(
+    "请输入一条完整的蛋白氨基酸序列（仅支持 20 种标准氨基酸字母，大小写均可）：",
+    placeholder="例如：MKTLL..."
+)
+
+# 如果用户输入了蛋白序列，则进行定位分析
+if protein_seq_input.strip():
+    # 清洗蛋白序列
+    full_protein = ''.join(aa_only.findall(protein_seq_input)).upper()
+    if not full_protein:
+        st.warning("❗ 未检测到合法的氨基酸字符，请重新输入！")
+        st.stop()
+
+    st.success(f"✅ 已读取蛋白序列（长度：{len(full_protein)} aa）")
+
+    # 构建定位结果
+    locate_results = []
+    for seq in cleaned_sequences:
+        seq = seq.upper()
+        if not seq:
+            continue
+        start = 1  # 使用 1-based 索引，便于阅读
+        while True:
+            idx = full_protein.find(seq, start - 1)
+            if idx == -1:
+                break
+            # 计算上下文区域
+            left_start = max(idx - 5, 0)
+            right_end = min(idx + len(seq) + 5, len(full_protein))
+            context = full_protein[left_start:right_end]
+            # 高亮匹配区域
+            match_start_in_context = idx - left_start
+            match_end_in_context = match_start_in_context + len(seq)
+            context_display = (
+                context[:match_start_in_context] +
+                "**" + context[match_start_in_context:match_end_in_context] + "**" +
+                context[match_end_in_context:]
+            )
+            locate_results.append({
+                'Peptide': seq,
+                'Start': idx + 1,
+                'End': idx + len(seq),
+                'Context (±5aa)': context_display
+            })
+            start = idx + 1  # 继续往后找，允许重复匹配
+
+    if locate_results:
+        st.subheader("蛋白定位结果")
+        locate_df = pd.DataFrame(locate_results)
+        st.dataframe(locate_df)   # Streamlit 会自动渲染 markdown
+        # 下载定位结果
+        st.download_button(
+            label="📥 下载定位结果 Excel",
+            data=to_excel(locate_df),
+            file_name='肽段蛋白定位结果.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    else:
+        st.info("⚠️ 当前输入的蛋白序列中未找到任何上传肽段的匹配。")
+else:
+    # 用户未输入蛋白序列，什么都不做
+    pass
 
 
 
