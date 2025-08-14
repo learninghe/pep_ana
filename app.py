@@ -11,38 +11,34 @@ SESSION_KEY = "has_counted_this_session"
 
 # ------------- 会话级去重 -------------
 if SESSION_KEY not in st.session_state:
-    # ------------- 获取 client IP -------------
     def get_visitor_ip():
-        # 常见代理/网关会带的头，按优先级排列
-        headers_to_try = [
-            "X-Forwarded-For",
-            "X-Real-IP",
-            "X-Client-IP",
-            "Cf-Connecting-IP",      # Cloudflare
-            "X-Cluster-Client-IP",   # AWS ELB / ALB
-            "Remote-Addr"
-        ]
-        for h in headers_to_try:
-            value = st.context.headers.get(h)
-            if value:
-                # X-Forwarded-For 可能是 "client, proxy1, proxy2"
-                return value.split(",")[0].strip()
-        return "unknown"   # 或者 return None
+        headers = ["X-Forwarded-For", "X-Real-IP", "X-Client-IP",
+                   "Cf-Connecting-IP", "X-Cluster-Client-IP", "Remote-Addr"]
+        for h in headers:
+            val = st.context.headers.get(h)
+            if val:
+                return val.split(",")[0].strip()
+        return None
+
+    now = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    ip = get_visitor_ip()
 
     # -------------- 读写日志 --------------
-    if os.path.exists(LOG_FILE):
+    try:
         with open(LOG_FILE, "r", encoding="utf-8") as f:
             log = json.load(f)
-    else:
+    except (FileNotFoundError, json.JSONDecodeError):
         log = {"total": 0, "records": []}
 
+    if not isinstance(log.get("records"), list):
+        log["records"] = []
+
     log["total"] += 1
-    log["records"].append({"time": now, "ip": ip})
+    log["records"].append({"time": now, "ip": ip or "unknown"})
 
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump(log, f, ensure_ascii=False, indent=2)
 
-    # 标记已计数
     st.session_state[SESSION_KEY] = True
 
 # ------------- UI 展示 -------------
@@ -199,6 +195,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
