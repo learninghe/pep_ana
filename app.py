@@ -4,47 +4,44 @@ import re
 import os
 import glob
 from io import BytesIO
-import json, os, datetime
+import json, os, datetime, streamlit as st
+
 LOG_FILE = "visit_log.json"
+SESSION_KEY = "has_counted_this_session"
 
-# ---------- 获取 IP ----------
-def get_visitor_ip():
-    # 本地调试时没有 X-Forwarded-For，会返回 127.0.0.1
-    forwarded = st.context.headers.get("X-Forwarded-For")
-    if forwarded:
-        # 可能形如 "client, proxy1, proxy2"，取第一个
-        return forwarded.split(",")[0].strip()
-    return st.context.headers.get("Remote-Addr", "unknown")
+# ------------- 会话级去重 -------------
+if SESSION_KEY not in st.session_state:
+    # -------------- 获取 IP --------------
+    def get_visitor_ip():
+        fwd = st.context.headers.get("X-Forwarded-For")
+        if fwd:
+            return fwd.split(",")[0].strip()
+        return st.context.headers.get("Remote-Addr", "unknown")
 
-now = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
-ip = get_visitor_ip()
+    now = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    ip = get_visitor_ip()
 
-# ---------- 读写日志 ----------
-if os.path.exists(LOG_FILE):
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
-        log = json.load(f)
-else:
-    log = {"total": 0, "visits": [], "records": []}
+    # -------------- 读写日志 --------------
+    if os.path.exists(LOG_FILE):
+        with open(LOG_FILE, "r", encoding="utf-8") as f:
+            log = json.load(f)
+    else:
+        log = {"total": 0, "records": []}
 
-# 旧数据迁移：把旧字段合并到新字段
-if "records" not in log:
-    log["records"] = []
-if "visits" in log and log["visits"]:        # 旧日志里只有时间
-    for t in log["visits"]:
-        log["records"].append({"time": t, "ip": "unknown"})
-    del log["visits"]                        # 迁移完删除旧字段
+    log["total"] += 1
+    log["records"].append({"time": now, "ip": ip})
 
-# 追加本次
-log["total"] += 1
-log["records"].append({"time": now, "ip": ip})
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
+        json.dump(log, f, ensure_ascii=False, indent=2)
 
-with open(LOG_FILE, "w", encoding="utf-8") as f:
-    json.dump(log, f, ensure_ascii=False, indent=2)
+    # 标记已计数
+    st.session_state[SESSION_KEY] = True
 
-# ---------- UI 展示 ----------
+# ------------- UI 展示 -------------
+log = json.load(open(LOG_FILE)) if os.path.exists(LOG_FILE) else {"total": 0}
 st.sidebar.metric("🔍 累计访问次数", log["total"])
 if st.sidebar.checkbox("显示最近 5 条访问记录"):
-    st.sidebar.json(log["records"][-5:])
+    st.sidebar.json(log.get("records", [])[-5:])
 
 # 正则表达式：仅保留氨基酸字母
 aa_only = re.compile(r'[ACDEFGHIKLMNPQRSTVWY]', flags=re.I)
@@ -194,6 +191,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
