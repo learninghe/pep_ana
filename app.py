@@ -153,5 +153,10 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+import streamlit as st
+import streamlit_analytics
 
+with streamlit_analytics.track():
+    st.title("我的应用")
+    st.slider("拖动我")
 
