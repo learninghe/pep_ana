@@ -4,24 +4,33 @@ import re
 import os
 import glob
 from io import BytesIO
-# ---------- 放在脚本最顶部，import 之后 ----------
-import json, os
-COUNTER_FILE = "page_view_count.json"
+import json, os, datetime
+LOG_FILE = "visit_log.json"
 
-# 读取历史次数
-if os.path.exists(COUNTER_FILE):
-    with open(COUNTER_FILE) as f:
-        view_total = json.load(f)
+# ----------------- 记录本次访问 -----------------
+now = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+# 读旧日志
+if os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "r", encoding="utf-8") as f:
+        log = json.load(f)
 else:
-    view_total = 0
+    log = {"total": 0, "visits": []}
 
-# 自增并立即写回
-view_total += 1
-with open(COUNTER_FILE, "w") as f:
-    json.dump(view_total, f)
+log["total"] += 1
+log["visits"].append(now)
 
-# 在侧边栏或页面合适位置展示
-st.sidebar.metric("🔍 累计访问次数", view_total)
+# 写回
+with open(LOG_FILE, "w", encoding="utf-8") as f:
+    json.dump(log, f, ensure_ascii=False, indent=2)
+
+# 在侧边栏展示
+st.sidebar.metric("🔍 累计访问次数", log["total"])
+if st.sidebar.checkbox("显示最近 5 次访问时间"):
+    st.sidebar.write(log["visits"][-5:])
+with open(LOG_FILE, "rb") as f:
+    st.sidebar.download_button("📥 下载访问日志", f, file_name="visit_log.json")
+    
 # 正则表达式：仅保留氨基酸字母
 aa_only = re.compile(r'[ACDEFGHIKLMNPQRSTVWY]', flags=re.I)
 
@@ -170,5 +179,6 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
