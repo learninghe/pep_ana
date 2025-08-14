@@ -7,29 +7,35 @@ from io import BytesIO
 import json, os, datetime
 LOG_FILE = "visit_log.json"
 
-# ----------------- 记录本次访问 -----------------
-now = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+# ---------- 获取 IP ----------
+def get_visitor_ip():
+    # 本地调试时没有 X-Forwarded-For，会返回 127.0.0.1
+    forwarded = st.context.headers.get("X-Forwarded-For")
+    if forwarded:
+        # 可能形如 "client, proxy1, proxy2"，取第一个
+        return forwarded.split(",")[0].strip()
+    return st.context.headers.get("Remote-Addr", "unknown")
 
-# 读旧日志
+now = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+ip = get_visitor_ip()
+
+# ---------- 读写日志 ----------
 if os.path.exists(LOG_FILE):
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         log = json.load(f)
 else:
-    log = {"total": 0, "visits": []}
+    log = {"total": 0, "records": []}
 
 log["total"] += 1
-log["visits"].append(now)
+log["records"].append({"time": now, "ip": ip})
 
-# 写回
 with open(LOG_FILE, "w", encoding="utf-8") as f:
     json.dump(log, f, ensure_ascii=False, indent=2)
 
-# 在侧边栏展示
+# ---------- UI 展示 ----------
 st.sidebar.metric("🔍 累计访问次数", log["total"])
-if st.sidebar.checkbox("显示最近 5 次访问时间"):
-    st.sidebar.write(log["visits"][-5:])
-with open(LOG_FILE, "rb") as f:
-    st.sidebar.download_button("📥 下载访问日志", f, file_name="visit_log.json")
+if st.sidebar.checkbox("显示最近 5 条访问记录"):
+    st.sidebar.json(log["records"][-5:])
     
 # 正则表达式：仅保留氨基酸字母
 aa_only = re.compile(r'[ACDEFGHIKLMNPQRSTVWY]', flags=re.I)
@@ -179,6 +185,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
