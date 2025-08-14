@@ -36,7 +36,7 @@ with open(LOG_FILE, "w", encoding="utf-8") as f:
 st.sidebar.metric("🔍 累计访问次数", log["total"])
 if st.sidebar.checkbox("显示最近 5 条访问记录"):
     st.sidebar.json(log["records"][-5:])
-    
+
 # 正则表达式：仅保留氨基酸字母
 aa_only = re.compile(r'[ACDEFGHIKLMNPQRSTVWY]', flags=re.I)
 
@@ -185,6 +185,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
