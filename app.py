@@ -12,19 +12,19 @@ SESSION_KEY = "has_counted_this_session"
 # ------------- 会话级去重 -------------
 if SESSION_KEY not in st.session_state:
     def get_visitor_ip():
-    # 先取 X-Forwarded-For
-    fwd = st.context.headers.get("X-Forwarded-For", "")
-    if fwd:
-        # 去掉空格，按逗号拆分
-        parts = [p.strip() for p in fwd.split(",")]
-        # 真实客户端一般在倒数第二段（Cloudflare / AWS ALB 场景）
-        if len(parts) >= 2:
-            return parts[-2]
-        else:
-            return parts[0]
+        # 先取 X-Forwarded-For
+        fwd = st.context.headers.get("X-Forwarded-For", "")
+        if fwd:
+            # 去掉空格，按逗号拆分
+            parts = [p.strip() for p in fwd.split(",")]
+            # 真实客户端一般在倒数第二段（Cloudflare / AWS ALB 场景）
+            if len(parts) >= 2:
+                return parts[-2]
+            else:
+                return parts[0]
 
-    # 兜底
-    return st.context.headers.get("Remote-Addr", "unknown")
+        # 兜底
+        return st.context.headers.get("Remote-Addr", "unknown")
 
     now = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
     ip = get_visitor_ip()
@@ -201,6 +201,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
