@@ -34,8 +34,7 @@ match_mode = st.radio(
 # ✅ 新增：直接在网页粘贴蛋白序列
 st.subheader(" 蛋白序列（可选）")
 protein_seq_input = st.text_area(
-    "请输入一条蛋白序列（纯字母即可，无需 FASTA 标题行，留空则不进行定位），输入后按ctrl+enter，demo对应序列MKCLLLALALTCGAQALIVTQTMKGLDIQKVAGTWYSLAMAASDISLLDAQSAPLRVYVEELKPTPEGDLEILLQKWENGECAQKKIIAEKTKIPAVFKIDALNENKVLVLDTDYKKYLL
-FCMENSAEPEQSLACQCLVRTPEVDDEALEKFDKALKALPMHIRLSFNPTQLEEQCHI",
+    "请输入一条蛋白序列（纯字母即可，无需 FASTA 标题行，留空则不进行定位），输入后按ctrl+enter，demo对应序列MKCLLLALALTCGAQALIVTQTMKGLDIQKVAGTWYSLAMAASDISLLDAQSAPLRVYVEELKPTPEGDLEILLQKWENGECAQKKIIAEKTKIPAVFKIDALNENKVLVLDTDYKKYLLFCMENSAEPEQSLACQCLVRTPEVDDEALEKFDKALKALPMHIRLSFNPTQLEEQCHI",
     placeholder="MKTLL...",
     height=100
 )
@@ -154,4 +153,5 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
