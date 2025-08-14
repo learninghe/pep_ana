@@ -24,8 +24,17 @@ if os.path.exists(LOG_FILE):
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         log = json.load(f)
 else:
-    log = {"total": 0, "records": []}
+    log = {"total": 0, "visits": [], "records": []}
 
+# 旧数据迁移：把旧字段合并到新字段
+if "records" not in log:
+    log["records"] = []
+if "visits" in log and log["visits"]:        # 旧日志里只有时间
+    for t in log["visits"]:
+        log["records"].append({"time": t, "ip": "unknown"})
+    del log["visits"]                        # 迁移完删除旧字段
+
+# 追加本次
 log["total"] += 1
 log["records"].append({"time": now, "ip": ip})
 
@@ -185,6 +194,7 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
