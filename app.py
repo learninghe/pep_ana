@@ -4,7 +4,24 @@ import re
 import os
 import glob
 from io import BytesIO
+# ---------- 放在脚本最顶部，import 之后 ----------
+import json, os
+COUNTER_FILE = "page_view_count.json"
 
+# 读取历史次数
+if os.path.exists(COUNTER_FILE):
+    with open(COUNTER_FILE) as f:
+        view_total = json.load(f)
+else:
+    view_total = 0
+
+# 自增并立即写回
+view_total += 1
+with open(COUNTER_FILE, "w") as f:
+    json.dump(view_total, f)
+
+# 在侧边栏或页面合适位置展示
+st.sidebar.metric("🔍 累计访问次数", view_total)
 # 正则表达式：仅保留氨基酸字母
 aa_only = re.compile(r'[ACDEFGHIKLMNPQRSTVWY]', flags=re.I)
 
@@ -153,10 +170,5 @@ if uploaded_file:
         file_name='肽段匹配结果.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-import streamlit as st
-import streamlit_analytics
 
-with streamlit_analytics.track():
-    st.title("我的应用")
-    st.slider("拖动我")
 
